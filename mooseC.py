@@ -238,7 +238,7 @@ class Player():
         Tackling(homeTeamList, awayTeamList, self)
         Tackling(awayTeamList, homeTeamList, self)
         for mate in homeTeamList:  ## player movement
-            if self.control == mate.position and not mate.tackling and not mate.throwing and not mate.batting and not mate.tackled and not mate.safe:
+            if self.control == mate.position and ball.pitched and not mate.tackling and not mate.throwing and not mate.batting and not mate.tackled and not mate.safe:
                 if mate.base != -1 or not mate.offense:
                     if pressed[K_UP] and mate.pos[1] > -four:
                         mate.pos[1] -= mate.accel
@@ -261,11 +261,22 @@ class Player():
                     else:
                         mate.running = False
                         mate.runTimer = 0
-            elif mate.batting:
-                if pressed[K_RIGHT] and mate.pos[0] < 246 * scale:
-                    mate.pos[0] += mate.accel / 2
-                if pressed[K_LEFT] and mate.pos[0] > 188 * scale:
-                    mate.pos[0] -= mate.accel / 2
+            elif not ball.pitched and self.control == mate.position:
+                if mate.batting:
+                    if pressed[K_RIGHT] and mate.pos[0] < 246 * scale:
+                        mate.pos[0] += mate.accel / 2
+                    if pressed[K_LEFT] and mate.pos[0] > 190 * scale:
+                        mate.pos[0] -= mate.accel / 2
+                else:
+                    if pressed[K_RIGHT] and mate.pos[0] < 246 * scale:
+                        mate.running = True
+                        mate.pos[0] += mate.accel / 2
+                    elif pressed[K_LEFT] and mate.pos[0] > 202 * scale:
+                        mate.running = True
+                        mate.pos[0] -= mate.accel / 2
+                    else:
+                        mate.running = False
+                        mate.runTimer = 0
 
 
 
@@ -592,8 +603,8 @@ class Teammate():
                 self.meterImage = pygame.transform.scale(self.meterImage, (int(self.throwTimer * scale / 4 + 1), oneSix))
             if self.throwTimer > 160:
                 self.meterUp = False
-            if self.throwTimer < 0 and not self.meterUp:
-                if ball.pitched:
+            if self.throwTimer < 0 and not self.meterUp:  ## throw at minimum speed if meter goes up
+                if ball.pitched:                        ## and then all the way back down
                     if player.inning % 2 != 0:
                         if ball.target == self.position:
                             ball.target += 1
