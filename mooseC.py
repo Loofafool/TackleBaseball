@@ -5,7 +5,7 @@ pygame.mixer.pre_init(44100, -16, 2, 2048)
 pygame.init()
 fpsClock = pygame.time.Clock()
 scale = 3
-DISPLAYSURF = pygame.display.set_mode((480 * scale, 270 * scale))
+DISPLAYSURF = pygame.display.set_mode((480 * scale, 270 * scale)) ## 16:9
 pygame.display.set_caption('Barons 2055: Tackle Baseball')
 pygame.mouse.set_visible(False)
 
@@ -18,12 +18,15 @@ font2 = pygame.font.Font('bit1.ttf', 24 * scale)
 black = (0, 0, 0)
 white = (255, 255, 255)
 gold = (255, 205, 0)
-two = 2 * scale
-four = 4 * scale
+two = 2 * scale     ## save myself some trouble by not having to type in "* scale" 
+four = 4 * scale    ## everytime i use some of these common numbers
 eight = 8 * scale
 ten = 10 * scale
 oneSix = 16 * scale
+twoFour = 24 * scale
 threeTwo = 32 * scale
+fourEight = 48 * scale
+fiveSix = 56 * scale
 sixFour = 64 * scale
 bottomEdge = 236 * scale
 rightEdge = 454 * scale
@@ -34,8 +37,8 @@ gameState = 'Beisbol'
 outDisplay = False
 displayTimer = 0
 
-pos0 = [220 * scale, 120 * scale]
-pos00 = [220 * scale, 200 * scale]
+pos0 = [220 * scale, 120 * scale]  ## default x/y positions for each player
+pos00 = [220 * scale, 200 * scale]  ## pitcher has two (his pre-hit and post-hit positions)
 pos1 = [400 * scale, 110 * scale]
 pos2 = [222 * scale, 22 * scale]
 pos3 = [50 * scale, 110 * scale]
@@ -44,7 +47,7 @@ battingPosLH = [238 * scale, 226 * scale]
 
 
     
-def ReadyPitch():
+def ReadyPitch():     ## resetting play for the next pitch
     player.safes = 0
     for mate in homeTeamList:
         mate.running = False
@@ -121,6 +124,7 @@ def ReadyPitch():
             i += 1
     ball.pitched = False
     ball.hit = False
+    ball.passed = False
     player.ballCon = 0
     player.previousOuts = player.outs
     if player.inning % 2 != 0:    
@@ -175,7 +179,7 @@ def Tackling(oList, dList, self):
                     elif random.randint(1, 100) > 98:
                         mate.tackleLeader = False
                         dList[player.ballCon].tackleLeader = True
-def RepositionDefense(self, dest, position):    
+def RepositionDefense(self, dest, position):    ## AI defenders always return to their default position
     if player.inning % 2 != 0:
         if player.control != position:
             if self.pos[1] < dest[1] - ten:
@@ -232,7 +236,7 @@ class Player():
         self.base3Rect = Rect(44 * scale, 144 * scale, threeTwo, threeTwo)
         self.base4Rect = Rect(232 * scale, 244 * scale, threeTwo, threeTwo)
     def update(self):
-        self.rect = Rect(homeTeamList[self.control].pos[0] + eight, homeTeamList[self.control].pos[1] + four, oneSix, 24 * scale)
+        self.rect = Rect(homeTeamList[self.control].pos[0] + eight, homeTeamList[self.control].pos[1] + four, oneSix, twoFour)
         if self.inning % 2 == 0 and ball.held:
             self.aiControl = self.ballCon
         Tackling(homeTeamList, awayTeamList, self)
@@ -261,12 +265,18 @@ class Player():
                     else:
                         mate.running = False
                         mate.runTimer = 0
-            elif not ball.pitched and self.control == mate.position:
+            elif not ball.hit and self.control == mate.position:  ## moving pitcher or batter
                 if mate.batting:
-                    if pressed[K_RIGHT] and mate.pos[0] < 246 * scale:
-                        mate.pos[0] += mate.accel / 2
-                    if pressed[K_LEFT] and mate.pos[0] > 190 * scale:
-                        mate.pos[0] -= mate.accel / 2
+                    if mate.righty:
+                        if pressed[K_RIGHT] and mate.pos[0] < 246 * scale:
+                            mate.pos[0] += mate.accel / 2
+                        if pressed[K_LEFT] and mate.pos[0] > 190 * scale:
+                            mate.pos[0] -= mate.accel / 2
+                    else:
+                        if pressed[K_RIGHT] and mate.pos[0] < 236 * scale:
+                            mate.pos[0] += mate.accel / 2
+                        if pressed[K_LEFT] and mate.pos[0] > 206 * scale:
+                            mate.pos[0] -= mate.accel / 2
                 else:
                     if pressed[K_RIGHT] and mate.pos[0] < 246 * scale:
                         mate.running = True
@@ -291,7 +301,7 @@ class Teammate():
         self.image = pygame.image.load(str(name) + '.png').convert_alpha()
         self.image = pygame.transform.scale(self.image, (384 * scale, threeTwo))
         self.righty = righty
-        self.bat = Bat('Wooden bat', self.righty)
+        self.bat = Bat('Wooden bat', self.position, self.righty)
         if team == 'moose':
             self.team = 1
             self.offense = False
@@ -354,15 +364,19 @@ class Teammate():
         self.rect = Rect(self.pos[0], self.pos[1], threeTwo, threeTwo)
         
     def update(self):
-        self.rect = Rect(self.pos[0] + eight, self.pos[1] + four, oneSix, 24 * scale)
+        self.rect = Rect(self.pos[0] + eight, self.pos[1] + four, oneSix, twoFour)
         if self.offense:  ##Offense
             if player.inning % 2 != 0:
                 if self.running == False and self.base == -1 and self.position == player.awayBatter and ball.hit == False:
                     self.batting = True
                     self.bat.update()
+                elif self.bat.swingTimer > 0:
+                    self.bat.update()
             else:
                 if self.running == False and self.base == -1 and self.position == player.homeBatter and ball.hit == False:
                     self.batting = True
+                    self.bat.update()
+                elif self.bat.swingTimer > 0:
                     self.bat.update()
                 
 
@@ -394,7 +408,7 @@ class Teammate():
                             player.safes += 1
                             self.base = 1
                             self.pos[0] = player.base1Rect[0] - eight
-                            self.pos[1] = player.base1Rect[1] - (24 * scale)
+                            self.pos[1] = player.base1Rect[1] - (twoFour)
                     elif self.base == 1:
                         self.pos[0] -= math.sin(math.radians(self.angle)) * -self.accel
                         self.pos[1] += math.cos(math.radians(self.angle)) * -self.accel
@@ -404,17 +418,17 @@ class Teammate():
                             player.safes += 1
                             self.base = 2
                             self.pos[0] = player.base2Rect[0] - eight
-                            self.pos[1] = player.base2Rect[1] - (24 * scale)
+                            self.pos[1] = player.base2Rect[1] - (twoFour)
                     elif self.base == 2:
                         self.pos[0] -= math.sin(math.radians(self.angle)) * -self.accel
                         self.pos[1] -= math.cos(math.radians(self.angle)) * -self.accel
-                        if self.pos[0] < 24 * scale:
+                        if self.pos[0] < twoFour:
                             self.running = False
                             self.safe = True
                             player.safes += 1
                             self.base = 3
                             self.pos[0] = player.base3Rect[0] - eight
-                            self.pos[1] = player.base3Rect[1] - (24 * scale)
+                            self.pos[1] = player.base3Rect[1] - (twoFour)
                     elif self.base == 3:
                         self.pos[0] += math.sin(math.radians(self.angle)) * -self.accel
                         self.pos[1] -= math.cos(math.radians(self.angle)) * -self.accel
@@ -440,21 +454,21 @@ class Teammate():
                     player.safes += 1
                     self.base = 1
                     self.pos[0] = player.base1Rect[0] - eight
-                    self.pos[1] = player.base1Rect[1] - (24 * scale)
+                    self.pos[1] = player.base1Rect[1] - (twoFour)
                 if player.rect.colliderect(player.base2Rect) and self.base == 1:
                     self.running = False
                     self.safe = True
                     player.safes += 1
                     self.base = 2
                     self.pos[0] = player.base2Rect[0] - eight
-                    self.pos[1] = player.base2Rect[1] - (24 * scale)
+                    self.pos[1] = player.base2Rect[1] - (twoFour)
                 if player.rect.colliderect(player.base3Rect) and self.base == 2:
                     self.running = False
                     self.safe = True
                     player.safes += 1
                     self.base = 3
                     self.pos[0] = player.base3Rect[0] - eight
-                    self.pos[1] = player.base3Rect[1] - (24 * scale)
+                    self.pos[1] = player.base3Rect[1] - (twoFour)
                 if player.rect.colliderect(player.base4Rect) and self.base == 3:
                     self.running = False
                     self.base = -1
@@ -495,10 +509,10 @@ class Teammate():
                         ball.held = False
                         if ball.accel < four:
                             ball.accel = four
-                    if random.randint(1, 100) > 97 and not self.throwing:
+                    elif random.randint(1, 100) > 97 and not self.throwing:
                         self.throwing = True
                 if ball.hit and not ball.held and not ball.passed:
-                    if ball.height == 0 or ball.pos[1] < self.pos[1]:
+                    if ball.height < 10 or ball.pos[1] < self.pos[1]:
                         self.running = True             ## chasing ball
                         self.speed[0] = 3 * scale
                         self.speed[1] = 3 * scale
@@ -536,6 +550,8 @@ class Teammate():
                         if self.throwing:
                             if random.randint(1, 100) > 90:
                                 ball.target = homeTeamList[self.pursuit].base + 1
+                                if ball.target > 3:
+                                    ball.target = 0
                                 if ball.target == self.position:
                                     ball.target += 1
                                 if ball.target > 3:
@@ -714,8 +730,9 @@ class Teammate():
        
 
 class Bat():
-    def __init__(self, bat, righty):
+    def __init__(self, bat, position, righty):
         self.righty = righty
+        self.position = position
         if self.righty:
             self.pos = [232 * scale, 246 * scale]
         else:
@@ -744,19 +761,22 @@ class Bat():
         self.pos1 = (self.pos[0] - self.rotated.get_rect().width/2, self.pos[1] - self.rotated.get_rect().height/2)
         
         if player.inning % 2 != 0:
-            if awayTeamList[player.awayBatter].righty:
-                self.pos[0] = awayTeamList[player.awayBatter].pos[0] + + 24 * scale
+            if awayTeamList[self.position].righty:
+                self.pos[0] = awayTeamList[self.position].pos[0] + twoFour
             else:
-                self.pos[0] = awayTeamList[player.awayBatter].pos[0] + + eight
+                self.pos[0] = awayTeamList[self.position].pos[0] + eight
         else:
-            if homeTeamList[player.homeBatter].righty:
-                self.pos[0] = homeTeamList[player.homeBatter].pos[0] + + 24 * scale
+            if homeTeamList[self.position].righty:
+                self.pos[0] = homeTeamList[self.position].pos[0] + twoFour
             else:
-                self.pos[0] = homeTeamList[player.homeBatter].pos[0] + + eight
+                self.pos[0] = homeTeamList[self.position].pos[0] + eight
         if self.swinging:
             self.swingTimer += timePassed
-        self.rotation = self.swingTimer
-        if self.swingTimer > 150:
+        if self.righty:
+            self.rotation = self.swingTimer
+        else:
+            self.rotation = -self.swingTimer
+        if self.swingTimer > 200:
             self.swingTimer = 0
             self.swinging = False
             
@@ -767,7 +787,7 @@ class Bat():
 class Ball():
     def __init__(self):
         self.image = pygame.image.load('16ball.png').convert_alpha()
-        self.image = pygame.transform.scale(self.image, (48 * scale, 6 * scale))
+        self.image = pygame.transform.scale(self.image, (fourEight, 6 * scale))
         self.imageAir = pygame.image.load('softball.png').convert_alpha()
         self.imageAir = pygame.transform.scale(self.imageAir, (oneSix, oneSix))
         self.pos = [0, 0]
@@ -954,7 +974,7 @@ while True: # main game loop
                             ball.target = 0
             
             if event.key in [K_SPACE] and player.inning % 2 == 0:
-                if ball.pitched and not ball.hit:
+                if not ball.hit and not homeTeamList[player.homeBatter].bat.swinging:
                     homeTeamList[player.homeBatter].swinging = True
                     homeTeamList[player.homeBatter].bat.swinging = True
                     if ball.pos[1] >= 210 * scale and random.randint(1, 100) > 20:
